@@ -13,24 +13,9 @@
   </header>
 
   <main>
-    <!-- ขั้นที่ 1: บอกเครื่องนี้ว่า backend อยู่ที่ไหน (สไลด์หน้า 89 ให้กรอก IP ของเครื่อง server) -->
-    <section class="card">
-      <h2>1. เชื่อมต่อ Backend</h2>
-      <div class="row">
-        <label for="backend-url">Backend URL</label>
-        <input type="text" id="backend-url" value="http://127.0.0.1:5000"
-               placeholder="เช่น http://192.168.1.100:5000">
-        <button id="connect-btn" type="button">เชื่อมต่อ</button>
-      </div>
-      <p class="hint">
-        รันบนเครื่องเดียวกับ backend ใช้ <code>http://127.0.0.1:5000</code> ได้เลย<br>
-        ถ้าเป็นคนละเครื่อง ให้ไปดู IPv4 Address ของเครื่อง server ด้วยคำสั่ง <code>ipconfig</code>
-      </p>
-    </section>
-
-    <!-- ขั้นที่ 2: เลือก operation (dropdown สร้างอัตโนมัติจาก GET /api/operations) -->
-    <section class="card" id="operation-card" hidden>
-      <h2>2. เลือก Operation</h2>
+    <!-- เลือก operation (dropdown สร้างอัตโนมัติจาก GET /api/operations) -->
+    <section class="card" id="operation-card">
+      <h2>เลือก Operation</h2>
       <div class="row">
         <label for="operation">Operation</label>
         <select id="operation"></select>
@@ -39,9 +24,9 @@
       <div id="params"></div>
     </section>
 
-    <!-- ขั้นที่ 3: อัปโหลดภาพแล้วส่งไปประมวลผล -->
-    <section class="card" id="upload-card" hidden>
-      <h2>3. เลือกภาพแล้วประมวลผล</h2>
+    <!-- อัปโหลดภาพแล้วส่งไปประมวลผล -->
+    <section class="card" id="upload-card">
+      <h2>เลือกภาพแล้วประมวลผล</h2>
       <div class="row">
         <input type="file" id="file-input" accept="image/*">
         <button id="process-btn" type="button" disabled>ประมวลผล</button>
@@ -54,12 +39,18 @@
     <section class="results">
       <figure>
         <figcaption>ภาพต้นฉบับ (ในเครื่อง client)</figcaption>
-        <img id="source-image" alt="ยังไม่ได้เลือกภาพ">
+        <div class="image-box">
+          <div id="source-placeholder" class="placeholder">ยังไม่ได้เลือกรูปภาพ</div>
+          <img id="source-image" alt="ภาพต้นฉบับ" style="display: none;">
+        </div>
       </figure>
       <figure>
         <figcaption>ผลลัพธ์ (ประมวลผลที่ฝั่ง server)</figcaption>
-        <img id="result-image" alt="ยังไม่มีผลลัพธ์">
-        <a id="download-btn" class="download" download="result.png" hidden>บันทึกภาพผลลัพธ์</a>
+        <div class="image-box">
+          <div id="result-placeholder" class="placeholder">รอผลลัพธ์การประมวลผล</div>
+          <img id="result-image" alt="ภาพผลลัพธ์" style="display: none;">
+        </div>
+        <a id="download-btn" class="download" download="result.png" style="display: none;">บันทึกภาพผลลัพธ์</a>
       </figure>
     </section>
   </main>

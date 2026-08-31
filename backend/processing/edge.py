@@ -65,6 +65,10 @@ def sobel(img_bgr, blur_ksize=5, ksize=3):
     ทดสอบ: รัน backend แล้วเลือก "Sobel Gradient Magnitude" ในหน้าเว็บ
            ผลที่ควรได้คือภาพเทาๆ ที่ขอบสว่าง ไม่ใช่ภาพขาวดำเส้นบางแบบ Canny
     """
-    raise NotImplementedError(
-        "sobel() ยังไม่ได้เขียน — งานของ Tshering (ดูขั้นตอนใน docstring ของฟังก์ชันนี้)"
-    )
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    blurred = cv2.GaussianBlur(gray, (_to_odd(blur_ksize), _to_odd(blur_ksize)), 0)
+    sobel_ksize = _to_odd(ksize)
+    gx = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=sobel_ksize)
+    gy = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=sobel_ksize)
+    mag = cv2.magnitude(gx, gy)
+    return cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)

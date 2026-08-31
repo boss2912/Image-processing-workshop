@@ -93,9 +93,20 @@ def harris_nms(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01, radius=10
     ทดสอบ: ใช้ภาพเดิมเทียบกับ harris() ธรรมดา จำนวนจุดต้องลดลงชัดเจน
            แล้วลองปรับ radius 3 -> 10 -> 30 ดูว่าจุดหายไปเรื่อยๆ ตามที่คาดไหม
     """
-    raise NotImplementedError(
-        "harris_nms() ยังไม่ได้เขียน — งานของบอส (ดูขั้นตอนใน docstring ของฟังก์ชันนี้)"
-    )
+    response = _corner_response(img_bgr, block_size, ksize, k)
+    size = 2 * int(radius) + 1
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
+    local_max = cv2.dilate(response, kernel)
+    max_val = float(response.max())
+    if max_val > 0:
+        mask = (response == local_max) & (response > float(threshold) * max_val)
+    else:
+        mask = np.zeros_like(response, dtype=bool)
+    ys, xs = np.nonzero(mask)
+    output = img_bgr.copy()
+    for x, y in zip(xs, ys):
+        cv2.circle(output, (int(x), int(y)), 4, (0, 0, 255), 2)
+    return output
 
 
 def contour_boxes(img_bgr, threshold=127, min_area=100):
@@ -129,6 +140,22 @@ def contour_boxes(img_bgr, threshold=127, min_area=100):
     ทดสอบ: หาภาพที่มีวัตถุแยกกันชัดๆ หลายชิ้น นับจำนวนกล่องที่ได้เทียบกับที่ตาเห็น
            ถ้าไม่ตรง ให้ไปปรับ threshold ก่อน แล้วค่อยปรับ min_area
     """
-    raise NotImplementedError(
-        "contour_boxes() ยังไม่ได้เขียน — งานของบอส (ดูขั้นตอนใน docstring ของฟังก์ชันนี้)"
-    )
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+    _, binary = cv2.threshold(gray, int(threshold), 255, cv2.THRESH_BINARY)
+    border_pixels = np.concatenate([binary[0, :], binary[-1, :], binary[:, 0], binary[:, -1]])
+    if np.mean(border_pixels) > 127:
+        binary = cv2.bitwise_not(binary)
+
+    contours, _ = cv2.findContours(binary, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    output = img_bgr.copy()
+    count = 0
+    for c in contours:
+        if cv2.contourArea(c) < float(min_area):
+            continue
+        x, y, w, h = cv2.boundingRect(c)
+        cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        count += 1
+
+    text = f"Objects: {count}"
+    cv2.putText(output, text, (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 2, cv2.LINE_AA)
+    return output
