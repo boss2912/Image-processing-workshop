@@ -1,195 +1,118 @@
-# Image Processing Workshop — Client/Server ด้วย REST API
+# Image Processing Workshop — Client/Server
 
-Workshop ท้าย **Lecture 9 — Edge and Corner Detection** วิชา 310-3311 Image Processing
+Workshop ท้าย Lecture 9 วิชา 310-3311 Image Processing
 
-รับไฟล์ภาพจากเครื่องผู้ใช้ → ส่งไปประมวลผลที่เครื่องเซิร์ฟเวอร์ด้วย OpenCV → ส่งภาพผลลัพธ์กลับมาแสดง
-โดยคุยกันผ่าน REST API (Flask + CORS ตามสไลด์หน้า 84-89)
-
-## โจทย์ต้นทาง
-
-จาก `docs/reference/Lecture 9 - Edge and Corner Detection (Workshop).pdf` หน้า 90
+## โจทย์
 
 1. สร้าง Image Processing server Backend ขึ้นมา 1 เครื่อง และ Frontend 1 เครื่อง
 2. เขียน Service ที่รับไฟล์ภาพจาก Client แล้วนำมาประมวลผลที่ฝั่ง Server
 3. ส่งภาพผลลัพธ์ที่ได้จากการประมวลผลย้อนกลับไปให้ Client
 4. ทำงานโดยใช้ REST API หรือ FAST API
 
-> **หมายเหตุเรื่องข้อ 4**: REST API คือ*รูปแบบสถาปัตยกรรม* ส่วน FastAPI คือ*ไลบรารีตัวหนึ่ง*ที่ใช้สร้าง REST API
-> โปรเจกต์นี้ใช้ **Flask** สร้าง REST API ซึ่งตรงกับคู่มือที่อาจารย์ให้ไว้ในสไลด์หน้า 86-89 (`request.files`, `CORS(app)`, `python app.py`)
+## โครงสร้าง
 
-## ทีมผู้จัดทำ
+```
+backend/                 รันบนเครื่องเซิร์ฟเวอร์
+├── app.py               Flask REST API + Canny Edge Detection
+└── requirements.txt
 
-| รหัสนักศึกษา | ชื่อ | ส่วนที่รับผิดชอบ |
-|---|---|---|
-| 6710301001 | Mr. Tshering Dorji | Edge Detection — Canny + Sobel |
-| 6710301006 | นาย พงศภัค เทียบพิมพ์ | Corner Detection + Region Labeling — Harris + Bounding box |
-| 6710301022 | นาย เจตน์ - | Flask Backend + Frontend + Integration |
+frontend/                รันบนเครื่องผู้ใช้
+├── index.html
+├── app.js               แก้ BACKEND_URL บรรทัดที่ 15
+└── style.css
+```
 
-## Operation ที่มีให้เลือก
-
-| Operation | ทำอะไร | อ้างอิงสไลด์ |
-|---|---|---|
-| Canny Edge Detection | หาขอบวัตถุ 5 ขั้นตอนของ Canny | หน้า 9-22 |
-| Sobel Gradient Magnitude | ความแรงของ gradient (ขั้นที่ 2 ของ Canny) | หน้า 11-12 |
-| Harris Corner Detection | หามุมของวัตถุ | หน้า 24-31 |
-| Harris + Non-maximum Suppression | ลดจุดมุมซ้ำในรัศมีที่กำหนด | หน้า 30 |
-| Region Labeling + Bounding Box | นับวัตถุและตีกรอบ | หน้า 37-43 |
+สองโฟลเดอร์นี้แยกกันสมบูรณ์ คัดลอกไปคนละเครื่องได้เลย
 
 ---
 
-## วิธีรัน
+## เครื่องเซิร์ฟเวอร์ (backend)
 
-### กรณีที่ 1 — ทดสอบบนเครื่องเดียว
-
-**หน้าต่างที่ 1: Backend**
+### ติดตั้ง (ทำครั้งเดียว)
 
 ```powershell
 cd backend
 python -m venv .venv
-.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-จะเห็นข้อความ `Running on http://0.0.0.0:5000`
-
-**หน้าต่างที่ 2: Frontend**
+### หา IP ของเครื่องนี้
 
 ```powershell
-cd frontend
-python -m http.server 8000
+ipconfig | Select-String "IPv4"
 ```
 
-เปิดเบราว์เซอร์ที่ **http://localhost:8000** — หน้าเว็บจะเชื่อมต่อ `http://127.0.0.1:5000` ให้อัตโนมัติ
+ดูบรรทัดที่เป็นวง LAN จริง เช่น `172.20.56.133` — **ห้ามใช้เลขที่ขึ้นต้นด้วย `169.254.`**
 
----
+### เปิดพอร์ต 5000 ใน Firewall (ทำครั้งเดียว ต้องเปิด PowerShell แบบ Run as administrator)
 
-### กรณีที่ 2 — เดโม 2 เครื่องจริง (ตามโจทย์ข้อ 1)
+```powershell
+New-NetFirewallRule -DisplayName "Image Processing Backend 5000" -Direction Inbound -LocalPort 5000 -Protocol TCP -Action Allow -Profile Any
+```
 
-**บนเครื่องเซิร์ฟเวอร์**
+### รัน
 
 ```powershell
 cd backend
-python app.py
+.\.venv\Scripts\python.exe app.py
 ```
 
-หา IP ของเครื่องนี้:
+ต้องเห็น **สองบรรทัด**
 
-```powershell
-ipconfig
+```
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.20.56.133:5000
 ```
 
-ดูบรรทัด **IPv4 Address** เช่น `192.168.1.100`
+ถ้าเห็นแค่บรรทัด `127.0.0.1` บรรทัดเดียว เครื่องอื่นจะต่อไม่ได้
 
-จากนั้น **เปิดพอร์ต 5000 ใน Windows Firewall** (ถ้าไม่ทำ เครื่องอื่นจะต่อไม่ติดแม้โค้ดถูกทุกอย่าง)
-เปิด PowerShell แบบ **Run as Administrator** แล้วรัน:
+ปล่อยหน้าต่างนี้เปิดค้างไว้ กด `Ctrl + C` เพื่อหยุด
 
-```powershell
-New-NetFirewallRule -DisplayName "Image Processing Backend 5000" -Direction Inbound -LocalPort 5000 -Protocol TCP -Action Allow
+---
+
+## เครื่องผู้ใช้ (frontend)
+
+### 1. แก้ IP ของเครื่องเซิร์ฟเวอร์
+
+เปิด `frontend/app.js` แก้บรรทัดที่ 15
+
+```js
+const BACKEND_URL = "http://172.20.56.133:5000";
 ```
 
-**บนเครื่องผู้ใช้**
-
-คัดลอกโฟลเดอร์ `frontend/` มาไว้ที่เครื่องนี้ แล้วรัน:
+### 2. รัน
 
 ```powershell
 cd frontend
 python -m http.server 8000
 ```
 
-เปิด **http://localhost:8000** แล้วแก้ช่อง **Backend URL** เป็น IP ของเครื่องเซิร์ฟเวอร์:
+เปิดเบราว์เซอร์ที่ **http://localhost:8000**
 
-```
-http://192.168.1.100:5000
-```
+> ไม่ต้อง `pip install` อะไรเลย เพราะเครื่องนี้ไม่ได้ประมวลผลภาพ
+> และ **ห้ามดับเบิลคลิก `index.html` เปิดตรงๆ** จะได้ URL แบบ `file://` ซึ่งเบราว์เซอร์จะบล็อกการเรียก backend
 
-กด **เชื่อมต่อ** → เลือก operation → เลือกภาพ → กด **ประมวลผล**
+### 3. ใช้งาน
 
-> เครื่องทั้งสองต้องอยู่ในวง Wi-Fi / LAN เดียวกัน
-
----
-
-## แก้ปัญหาที่เจอบ่อย
-
-| อาการ | สาเหตุที่เป็นไปได้มากที่สุด | วิธีแก้ |
-|---|---|---|
-| หน้าเว็บขึ้น "เชื่อมต่อไม่ได้" แต่เปิด URL เดียวกันในเบราว์เซอร์ตรงๆ เห็น JSON ปกติ | CORS ไม่ทำงาน | เช็คว่า `pip install flask-cors` แล้ว และมี `CORS(app)` ใน `app.py` |
-| ต่อจากอีกเครื่องไม่ติดเลย ทั้งที่เครื่อง server เปิดอยู่ | Windows Firewall บล็อกพอร์ต 5000 | รันคำสั่ง `New-NetFirewallRule` ข้างบน |
-| ต่อไม่ติด และ ping IP นั้นก็ไม่ผ่าน | คนละวงเครือข่าย | ต่อ Wi-Fi ตัวเดียวกัน หรือปิด AP isolation ที่ router |
-| กดประมวลผลแล้วขึ้น 501 | operation นั้นยังเป็น stub รอเจ้าของเขียน | ดู `docs/TASK_CHECKLIST.md` ว่าเป็นงานของใคร |
-| อัปโหลดภาพใหญ่แล้วขึ้น 413 | ไฟล์เกิน 15 MB | ย่อภาพก่อน หรือแก้ `MAX_CONTENT_LENGTH` (ต้องแจ้งทีม) |
-| `ModuleNotFoundError: No module named 'cv2'` | ลืม activate venv หรือยังไม่ได้ install | `.venv\Scripts\activate` แล้ว `pip install -r requirements.txt` |
-| ผลลัพธ์ภาพของแต่ละคนไม่เหมือนกันทั้งที่ใช้พารามิเตอร์เดียวกัน | ติดตั้ง OpenCV คนละเวอร์ชัน | ดูหัวข้อ "ล็อกเวอร์ชัน" ข้างล่าง |
-
-### ล็อกเวอร์ชัน — เรื่องที่ต้องระวังเป็นพิเศษ
-
-`backend/requirements.txt` ล็อกเวอร์ชันไว้ทุกตัวโดยตั้งใจ **อย่าถอดออก** เพราะถ้าแต่ละคนได้ OpenCV
-คนละรุ่น ผลของ Canny/Harris อาจต่างกันเล็กน้อยโดยไม่มีใครรู้ตัว แล้วจะเถียงกันว่าใครทำถูก
-
-**กับดักที่เจอมาแล้วจริง**: `opencv-python` กับ `opencv-contrib-python` **ติดตั้งลงโฟลเดอร์ `cv2/` เดียวกัน**
-ตัวที่ติดตั้งทีหลังจะเขียนทับตัวแรก แต่ `pip list` ยังรายงานว่ามีทั้งคู่ ผลคือ:
-
-```
-pip list           ->  opencv-python 4.10.0.84  และ  opencv-contrib-python 5.0.0.93
-cv2.__version__    ->  5.0.0        (ตัวที่ทำงานจริงคือ contrib ไม่ใช่ตัวที่คิดว่าใช้อยู่)
-```
-
-**วิธีเช็คว่าเครื่องตัวเองมีปัญหานี้ไหม**
-
-```powershell
-pip list | findstr /i opencv
-python -c "import cv2; print(cv2.__version__)"
-```
-
-ถ้าเห็น opencv 2 แพ็กเกจ หรือเลขเวอร์ชันไม่ตรงกัน ให้ถอนออกให้เหลือตัวเดียว:
-
-```powershell
-pip uninstall opencv-contrib-python opencv-python
-pip install -r requirements.txt
-```
-
-**ทางที่ปลอดภัยที่สุดคือใช้ virtual environment ของโปรเจกต์นี้เสมอ** (`python -m venv .venv`)
-เพราะ venv จะมีเฉพาะแพ็กเกจที่ระบุใน `requirements.txt` ไม่ปนกับที่ติดตั้งไว้ทั่วเครื่อง
+เลือกรูป → กดประมวลผล → ภาพซ้ายคือต้นฉบับ ภาพขวาคือผลลัพธ์ที่เครื่องเซิร์ฟเวอร์ส่งกลับมา
 
 ---
 
-## โครงสร้างโปรเจกต์
+## REST API
 
-```
-backend/
-├── app.py                  Flask + CORS + 3 endpoint
-├── requirements.txt
-└── processing/
-    ├── __init__.py         ทะเบียน OPERATIONS (จุดต่อของ 3 คน)
-    ├── edge.py             Canny + Sobel
-    └── corner.py           Harris + NMS + Bounding box
+| Method | Endpoint | รับ | คืน |
+|---|---|---|---|
+| POST | `/api/process` | `multipart/form-data` field ชื่อ `image` | JSON `{"success": true, "image": "data:image/png;base64,..."}` |
 
-frontend/
-├── index.html              ช่อง Backend URL + operation list + upload
-├── app.js                  เรียก REST API (ไม่ประมวลผลภาพเอง)
-└── style.css
+กรณีผิดพลาดคืน `{"success": false, "error": "..."}` พร้อม HTTP 400 หรือ 500
 
-docs/
-├── ARCHITECTURE.md         ทำไมโครงสร้างเป็นแบบนี้
-├── API_CONTRACT.md         สัญญาระหว่างงานของ 3 คน
-├── TEAM_AND_WORKFLOW.md    งานของแต่ละคน + git workflow (main/develop/feature)
-├── TASK_CHECKLIST.md       เช็คลิสต์รายคน
-└── reference/              สไลด์ Lecture 9 ที่ใช้เป็นโจทย์
-```
+---
 
-## REST API โดยย่อ
+## ต่อไม่ติด
 
-| Method | Endpoint | หน้าที่ |
+| อาการ | สาเหตุ | วิธีแก้ |
 |---|---|---|
-| GET | `/api/health` | เช็คว่า backend ทำงานอยู่ |
-| GET | `/api/operations` | รายชื่อ operation + พารามิเตอร์ (frontend ใช้สร้าง dropdown) |
-| POST | `/api/process` | รับภาพ + operation + พารามิเตอร์ → คืนภาพผลลัพธ์ |
-
-รายละเอียดเต็มอยู่ใน [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md)
-
-## เอกสารทีม
-
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — ทำไมประมวลผลที่ server ไม่ใช่ที่เบราว์เซอร์
-- [`docs/API_CONTRACT.md`](docs/API_CONTRACT.md) — จุดต่อระหว่างงานของ 3 คน
-- [`docs/TEAM_AND_WORKFLOW.md`](docs/TEAM_AND_WORKFLOW.md) — งานของแต่ละคน + git workflow
-- [`docs/TASK_CHECKLIST.md`](docs/TASK_CHECKLIST.md) — เช็คลิสต์ก่อนบอกว่าเสร็จ
+| `ping <ip>` ไม่ผ่าน | คนละวง Wi-Fi หรือ Wi-Fi เปิด AP isolation | ใช้ฮอตสปอตมือถือ ให้ทั้งสองเครื่องต่ออันเดียวกัน |
+| ping ผ่าน แต่หน้าเว็บต่อไม่ติด | Windows Firewall บล็อกพอร์ต 5000 | รันคำสั่ง `New-NetFirewallRule` ข้างบน |
+| หน้าเว็บ error แต่เปิด URL ตรงๆ ได้ | CORS | เช็คว่ามี `CORS(app)` และติดตั้ง `flask-cors` แล้ว |
+| `ModuleNotFoundError: No module named 'cv2'` | ไม่ได้ใช้ python ใน `.venv` | ใช้ `.\.venv\Scripts\python.exe app.py` |
