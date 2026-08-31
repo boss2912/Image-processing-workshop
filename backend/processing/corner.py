@@ -2,6 +2,19 @@
 Corner Detection + Region Labeling — เจ้าของไฟล์: พงศภัค เทียบพิมพ์
 อ้างอิง: Lecture 9 หน้า 24-31 (Harris) และหน้า 37-43 (Region labeling / Bounding box)
 
+ไฟล์นี้มี 7 ฟังก์ชัน แบ่งเป็น 2 พวก
+
+    พวกตัวช่วย (ชื่อขึ้นต้นด้วย _ แปลว่าใช้กันเองในไฟล์นี้ ไม่ได้เปิดให้หน้าเว็บเรียก)
+        _to_odd()           ทำเลขให้เป็นเลขคี่
+        _scale_for()        หาขนาดที่เหมาะกับภาพ สำหรับวาดวงกลม/ตัวอักษร
+        _draw_count()       เขียนตัวเลขสรุปลงบนภาพ
+        _corner_response()  คำนวณว่าแต่ละจุดในภาพ "เป็นมุมแค่ไหน"
+
+    พวกที่หน้าเว็บเรียกได้จริง (ลงทะเบียนไว้ใน __init__.py)
+        harris()            วาดจุดแดงทับทุกพิกเซลที่เป็นมุม
+        harris_nms()        เหมือนข้างบน แต่ลดจุดซ้ำให้เหลือจุดเดียวต่อมุม
+        contour_boxes()     นับวัตถุในภาพแล้วตีกรอบ
+
 กติกาของไฟล์นี้ (ตกลงกันไว้ใน docs/API_CONTRACT.md):
     ทุกฟังก์ชันต้องมีหน้าตา  def ชื่อ(img_bgr, **params) -> numpy.ndarray
     - img_bgr : ภาพต้นฉบับ 3 channel เรียงแบบ BGR (แบบที่ OpenCV อ่านมาให้)
@@ -14,12 +27,18 @@ import cv2
 import numpy as np
 
 
+# _to_odd() : ทำให้ตัวเลขเป็นเลขคี่
+#   รับ  -> ตัวเลข 1 ตัว (เช่น 4)
+#   คืน  -> ตัวเลขเลขคี่ (เช่น 5)
 def _to_odd(n):
     """ทำให้เป็นเลขคี่เสมอ เพราะ Sobel ที่อยู่ข้างใน cornerHarris บังคับ ksize เป็นเลขคี่"""
     n = int(n)
     return n if n % 2 == 1 else n + 1
 
 
+# _scale_for() : ดูว่าภาพนี้ใหญ่แค่ไหน จะได้วาดวงกลม/ตัวหนังสือให้พอดีกับภาพ
+#   รับ  -> ภาพ
+#   คืน  -> ตัวเลขตัวคูณ (ภาพเล็กได้ 1.0, ภาพมือถือกว้าง 4800 ได้ 4.0)
 def _scale_for(img):
     """
     หาขนาดที่เหมาะกับภาพนี้ สำหรับวาดวงกลม/ตัวอักษร
@@ -30,6 +49,9 @@ def _scale_for(img):
     return max(1.0, img.shape[1] / 1200.0)
 
 
+# _draw_count() : เขียนตัวเลขสรุปไว้มุมซ้ายบนของภาพ เช่น "corners: 196"
+#   รับ  -> ภาพ + ข้อความที่จะเขียน
+#   คืน  -> ไม่คืนอะไร (แก้ภาพที่ส่งเข้ามาโดยตรง)
 def _draw_count(img, text):
     """
     เขียนตัวเลขสรุปมุมซ้ายบนของภาพ
@@ -44,6 +66,9 @@ def _draw_count(img, text):
     cv2.putText(img, text, origin, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 255, 255), thickness)
 
 
+# _corner_response() : ให้คะแนนทุกพิกเซลว่า "เป็นมุมแค่ไหน"
+#   รับ  -> ภาพสี + ค่าตั้งต้นของ Harris (block_size, ksize, k)
+#   คืน  -> ตารางตัวเลขขนาดเท่าภาพ ค่าสูง = เป็นมุม / ค่าติดลบ = เป็นขอบ / ใกล้ 0 = พื้นเรียบ
 def _corner_response(img_bgr, block_size, ksize, k):
     """
     หา Corner Response Function (CRF) ตามสไลด์หน้า 26-28
@@ -65,6 +90,9 @@ def _corner_response(img_bgr, block_size, ksize, k):
     return cv2.cornerHarris(gray, int(block_size), _to_odd(ksize), float(k))
 
 
+# harris() : หามุมของวัตถุ แล้วระบายสีแดงทับทุกพิกเซลที่เป็นมุม
+#   รับ  -> ภาพสี + block_size + ksize + k + threshold
+#   คืน  -> ภาพสีเดิม ที่มีจุดแดงเป็นกระจุกตรงมุม
 def harris(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01):
     """
     Harris Corner Detection แบบพื้นฐาน — ระบายสีแดงทับทุกพิกเซลที่ R สูงพอ
@@ -88,6 +116,9 @@ def harris(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01):
     return output
 
 
+# harris_nms() : เหมือน harris() แต่ลดจุดที่ซ้ำกัน ให้เหลือจุดเดียวต่อ 1 มุม
+#   รับ  -> ภาพสี + block_size + ksize + k + threshold + radius (รัศมีที่ให้เหลือจุดเดียว)
+#   คืน  -> ภาพสีเดิม ที่มีวงกลมแดงรอบมุม + ตัวเลขจำนวนมุมมุมซ้ายบน
 def harris_nms(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01, radius=10):
     """
     Harris + Non-maximum Suppression — สไลด์หน้า 30
@@ -135,6 +166,9 @@ def harris_nms(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01, radius=10
     return output
 
 
+# contour_boxes() : นับว่าในภาพมีวัตถุกี่ชิ้น แล้วตีกรอบสี่เหลี่ยมรอบแต่ละชิ้น
+#   รับ  -> ภาพสี + threshold (เส้นแบ่งขาว/ดำ) + min_area (ขนาดเล็กสุดที่ยอมนับ) + invert (สลับด้าน)
+#   คืน  -> ภาพสีเดิม ที่มีกรอบเขียวรอบวัตถุ + ตัวเลขจำนวนวัตถุมุมซ้ายบน
 def contour_boxes(img_bgr, threshold=127, min_area=100, invert=0):
     """
     Region Labeling + Bounding Box — สไลด์หน้า 37-43
