@@ -49,22 +49,33 @@ def sobel(img_bgr, blur_ksize=5, ksize=3):
     """
     Sobel Gradient Magnitude — ขั้นตอนที่ 2 ของ Canny ที่ดึงออกมาดูเดี่ยวๆ (สไลด์หน้า 11-12)
 
-    >>> งานของ Tshering — ยังไม่ได้เขียน <<<
-
-    สิ่งที่ต้องทำ (ทำตามลำดับนี้ได้เลย):
-        1. แปลงเป็น grayscale ด้วย cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
-        2. เบลอด้วย cv2.GaussianBlur เหมือนใน canny() ข้างบน (ใช้ _to_odd(blur_ksize))
-        3. หา gradient แกน x : cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=_to_odd(ksize))
-           หา gradient แกน y : cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=_to_odd(ksize))
-           *** ต้องใช้ CV_64F ไม่ใช่ uint8 เพราะ gradient ติดลบได้ ถ้าใช้ uint8 ค่าลบจะโดนตัดทิ้งหมด
-        4. หา magnitude : np.sqrt(gx**2 + gy**2)   หรือ cv2.magnitude(gx, gy)
-        5. ปรับสเกลกลับมา 0-255 แล้วแปลงเป็น uint8 :
-           cv2.normalize(mag, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-        6. return ผลลัพธ์ (แล้วลบ raise NotImplementedError ทิ้ง)
+    ขั้นตอน:
+        1. แปลงภาพเป็น grayscale และลด noise ด้วย Gaussian blur
+        2. คำนวณ gradient แกน x และ y ด้วย CV_64F เพื่อรักษาค่าติดลบ
+        3. รวม gradient ทั้งสองแกนเป็น magnitude
+        4. normalize เป็นช่วง 0-255 และคืนค่าเป็น uint8
 
     ทดสอบ: รัน backend แล้วเลือก "Sobel Gradient Magnitude" ในหน้าเว็บ
            ผลที่ควรได้คือภาพเทาๆ ที่ขอบสว่าง ไม่ใช่ภาพขาวดำเส้นบางแบบ Canny
     """
-    raise NotImplementedError(
-        "sobel() ยังไม่ได้เขียน — งานของ Tshering (ดูขั้นตอนใน docstring ของฟังก์ชันนี้)"
-    )
+    # Sobel works on image intensity, so convert the BGR input to grayscale first.
+    gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
+
+    # Gaussian smoothing reduces noise that could otherwise appear as false edges.
+    # OpenCV requires both Gaussian and Sobel kernel sizes to be odd numbers.
+    blur_size = _to_odd(blur_ksize)
+    sobel_size = _to_odd(ksize)
+    blurred = cv2.GaussianBlur(gray, (blur_size, blur_size), 0)
+
+    # Calculate horizontal and vertical intensity gradients separately
+    # CV_64F preserves negative gradients instead of clipping them to zero.
+    gradient_x = cv2.Sobel(blurred, cv2.CV_64F, 1, 0, ksize=sobel_size)
+    gradient_y = cv2.Sobel(blurred, cv2.CV_64F, 0, 1, ksize=sobel_size)
+
+    # Combine both directions to obtain the overall edge strength per pixel.
+    magnitude = cv2.magnitude(gradient_x, gradient_y)
+
+    # Scale the magnitude into a displayable 8-bit grayscale image (0-255).
+    return cv2.normalize(
+        magnitude, None, 0, 255, cv2.NORM_MINMAX
+    ).astype(np.uint8)
