@@ -11,6 +11,8 @@
  * ตามโจทย์ workshop ข้อ 2
  */
 
+const backendUrlInput = document.getElementById("backend-url");
+const connectBtn = document.getElementById("connect-btn");
 const operationCard = document.getElementById("operation-card");
 const operationSelect = document.getElementById("operation");
 const operationOwner = document.getElementById("operation-owner");
@@ -33,8 +35,17 @@ function setStatus(message, kind = "") {
   statusEl.className = "status" + (kind ? " " + kind : "");
 }
 
-/** ดึง Backend URL อัตโนมัติ */
-function backendUrl() {
+/**
+ * เดา Backend URL จากที่อยู่ของหน้าเว็บเอง — ใช้เป็น "ค่าตั้งต้น" ที่เติมให้ในช่องกรอก
+ *
+ * เปิดหน้าเว็บด้วย localhost      -> เดาว่า backend อยู่เครื่องเดียวกัน (127.0.0.1)
+ * เปิดหน้าเว็บด้วย 172.20.56.133 -> เดาว่า backend อยู่เครื่องเดียวกับที่เสิร์ฟหน้าเว็บ
+ *
+ * การเดาแบบนี้ใช้ไม่ได้ตอนเดโม 2 เครื่องแบบที่โจทย์ต้องการ
+ * เพราะเครื่องผู้ใช้เสิร์ฟหน้าเว็บเอง (localhost:8000) แต่ backend อยู่อีกเครื่อง
+ * จึงต้องมีช่องให้กรอกเองทับค่าที่เดาได้เสมอ (สไลด์หน้า 89)
+ */
+function detectBackendUrl() {
   const host = window.location.hostname;
   if (!host || host === "localhost") {
     return "http://127.0.0.1:5000";
@@ -42,22 +53,23 @@ function backendUrl() {
   return `http://${host}:5000`;
 }
 
+/** Backend URL ที่จะใช้จริง — เอาจากช่องกรอกก่อน ถ้าว่างค่อยใช้ค่าที่เดาได้ */
+function backendUrl() {
+  const typed = backendUrlInput.value.trim().replace(/\/+$/, "");
+  return typed || detectBackendUrl();
+}
+
 /** ขั้นที่ 1 — เชื่อมต่อ Backend อัตโนมัติในเบื้องหลัง แล้วดึงรายชื่อ operation */
 async function connect() {
   const base = backendUrl();
   setStatus("กำลังเชื่อมต่อ Backend (" + base + ") ...");
   try {
-    let res = null;
-    try {
-      res = await fetch(base + "/api/health");
-    } catch (e) {
-      // Fallback ลอง 127.0.0.1 ถ้าต่อ localhost ไม่ติด
-      if (base !== "http://127.0.0.1:5000") {
-        res = await fetch("http://127.0.0.1:5000/api/health");
-      } else {
-        throw e;
-      }
-    }
+    // ยิงไปที่ URL ที่ผู้ใช้ระบุเท่านั้น ไม่มี fallback เงียบๆ ไปที่ 127.0.0.1
+    // เพราะตอนเดโม 2 เครื่อง ถ้าแอบ fallback จะขึ้นว่าสำเร็จทั้งที่ต่อผิดเครื่อง หาสาเหตุไม่เจอ
+    //
+    // ตัดรอที่ 5 วินาที: ถ้าพิมพ์ IP ผิด Windows จะรอ TCP timeout เป็นนาที
+    // ผู้ใช้จะนึกว่าเว็บค้าง แทนที่จะรู้ว่ากรอก IP ผิด
+    const res = await fetch(base + "/api/health", { signal: AbortSignal.timeout(5000) });
     const health = await res.json();
     if (health.status !== "ok") throw new Error("Backend ตอบกลับผิดรูปแบบ");
 
@@ -67,9 +79,13 @@ async function connect() {
 
     setStatus("เชื่อมต่อ Backend สำเร็จ: " + health.service + " (" + operations.length + " operations)", "ok");
   } catch (err) {
+    // TimeoutError = ยิงไปแล้วเงียบจนครบ 5 วินาที มักแปลว่า IP ผิด หรือ firewall บล็อก
+    const reason = err.name === "TimeoutError"
+      ? "ไม่มีการตอบกลับภายใน 5 วินาที (IP อาจผิด หรือ firewall บล็อกพอร์ต 5000)"
+      : err.message;
     setStatus(
-      "เชื่อมต่อ Backend ไม่สำเร็จ: " + err.message +
-      " — กรุณาตรวจสอบว่า Terminal รัน 'python app.py' อยู่",
+      "เชื่อมต่อ Backend ไม่สำเร็จ: " + reason +
+      " — เช็คว่าเครื่องเซิร์ฟเวอร์รัน app.py อยู่จริง, Backend URL ในช่องด้านบนถูกต้อง, และ firewall เปิดพอร์ต 5000 แล้ว",
       "error"
     );
   }
@@ -198,6 +214,14 @@ fileInput.addEventListener("change", () => {
 
 processBtn.addEventListener("click", process);
 
-// ลองเชื่อมต่ออัตโนมัติตอนเปิดหน้าเว็บ ด้วยค่า default (127.0.0.1:5000)
-// ถ้าไม่ติดก็แค่ขึ้น error ให้ผู้ใช้แก้ URL เอง
+// กดปุ่ม "เชื่อมต่อ" หรือกด Enter ในช่อง URL แล้วลองต่อใหม่ได้ทันที
+// (จำเป็นตอนเดโม 2 เครื่อง เพราะต้องแก้ IP แล้วต่อใหม่โดยไม่ต้อง refresh หน้า)
+connectBtn.addEventListener("click", connect);
+backendUrlInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") connect();
+});
+
+// เติมค่าที่เดาได้ให้ในช่องกรอกก่อน แล้วลองเชื่อมต่ออัตโนมัติตอนเปิดหน้าเว็บ
+// ถ้าไม่ติดก็แค่ขึ้น error สีแดง ผู้ใช้แก้ URL ในช่องแล้วกดเชื่อมต่อใหม่ได้เลย
+backendUrlInput.value = detectBackendUrl();
 connect();
