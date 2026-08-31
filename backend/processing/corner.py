@@ -138,7 +138,6 @@ def harris_nms(img_bgr, block_size=2, ksize=3, k=0.04, threshold=0.01, radius=10
     คืนค่า: ภาพ BGR ที่มีวงกลมสีแดงรอบมุมที่ตรวจพบ + จำนวนมุมมุมซ้ายบน
     """
     response = _corner_response(img_bgr, block_size, ksize, k)
-
     # kernel วงกลมรัศมี radius -> ขนาดจริงคือเส้นผ่านศูนย์กลาง 2*radius+1 (ต้องเป็นเลขคี่เพื่อให้มีจุดกลาง)
     size = 2 * int(radius) + 1
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (size, size))
