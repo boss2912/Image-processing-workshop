@@ -119,6 +119,37 @@ http://192.168.1.100:5000
 | กดประมวลผลแล้วขึ้น 501 | operation นั้นยังเป็น stub รอเจ้าของเขียน | ดู `docs/TASK_CHECKLIST.md` ว่าเป็นงานของใคร |
 | อัปโหลดภาพใหญ่แล้วขึ้น 413 | ไฟล์เกิน 15 MB | ย่อภาพก่อน หรือแก้ `MAX_CONTENT_LENGTH` (ต้องแจ้งทีม) |
 | `ModuleNotFoundError: No module named 'cv2'` | ลืม activate venv หรือยังไม่ได้ install | `.venv\Scripts\activate` แล้ว `pip install -r requirements.txt` |
+| ผลลัพธ์ภาพของแต่ละคนไม่เหมือนกันทั้งที่ใช้พารามิเตอร์เดียวกัน | ติดตั้ง OpenCV คนละเวอร์ชัน | ดูหัวข้อ "ล็อกเวอร์ชัน" ข้างล่าง |
+
+### ล็อกเวอร์ชัน — เรื่องที่ต้องระวังเป็นพิเศษ
+
+`backend/requirements.txt` ล็อกเวอร์ชันไว้ทุกตัวโดยตั้งใจ **อย่าถอดออก** เพราะถ้าแต่ละคนได้ OpenCV
+คนละรุ่น ผลของ Canny/Harris อาจต่างกันเล็กน้อยโดยไม่มีใครรู้ตัว แล้วจะเถียงกันว่าใครทำถูก
+
+**กับดักที่เจอมาแล้วจริง**: `opencv-python` กับ `opencv-contrib-python` **ติดตั้งลงโฟลเดอร์ `cv2/` เดียวกัน**
+ตัวที่ติดตั้งทีหลังจะเขียนทับตัวแรก แต่ `pip list` ยังรายงานว่ามีทั้งคู่ ผลคือ:
+
+```
+pip list           ->  opencv-python 4.10.0.84  และ  opencv-contrib-python 5.0.0.93
+cv2.__version__    ->  5.0.0        (ตัวที่ทำงานจริงคือ contrib ไม่ใช่ตัวที่คิดว่าใช้อยู่)
+```
+
+**วิธีเช็คว่าเครื่องตัวเองมีปัญหานี้ไหม**
+
+```powershell
+pip list | findstr /i opencv
+python -c "import cv2; print(cv2.__version__)"
+```
+
+ถ้าเห็น opencv 2 แพ็กเกจ หรือเลขเวอร์ชันไม่ตรงกัน ให้ถอนออกให้เหลือตัวเดียว:
+
+```powershell
+pip uninstall opencv-contrib-python opencv-python
+pip install -r requirements.txt
+```
+
+**ทางที่ปลอดภัยที่สุดคือใช้ virtual environment ของโปรเจกต์นี้เสมอ** (`python -m venv .venv`)
+เพราะ venv จะมีเฉพาะแพ็กเกจที่ระบุใน `requirements.txt` ไม่ปนกับที่ติดตั้งไว้ทั่วเครื่อง
 
 ---
 
