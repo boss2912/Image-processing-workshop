@@ -4,15 +4,21 @@ Image Processing Backend — Flask REST API
 
 เจ้าของไฟล์: เจตน์
 
+ไฟล์นี้คือ "พนักงานรับของ" ของเครื่องเซิร์ฟเวอร์
+มันไม่ได้ประมวลผลภาพเอง แต่เป็นคนรับภาพจากหน้าเว็บ ส่งต่อให้ฟังก์ชันใน processing/
+แล้วเอาผลลัพธ์ส่งกลับไป
+
+ไฟล์นี้มี 5 ฟังก์ชัน:
+    parse_params()    แปลงค่าที่กรอกในหน้าเว็บ (เป็นข้อความ) ให้เป็นตัวเลข
+    health_check()    ตอบว่า "ยังอยู่นะ"                     <- GET  /api/health
+    list_operations() ส่งรายชื่อ operation ให้หน้าเว็บ        <- GET  /api/operations
+    process()         รับภาพ -> ประมวลผล -> ส่งภาพกลับ      <- POST /api/process
+    too_large()       ดักกรณีอัปโหลดไฟล์ใหญ่เกิน
+
 รัน:
     python app.py
 ค่าเริ่มต้นคือ 0.0.0.0:5000 — ผูกกับ 0.0.0.0 (ไม่ใช่ 127.0.0.1) เพราะตอนเดโมต้องให้
 frontend ที่อยู่คนละเครื่องในวง LAN เรียกเข้ามาได้
-
-Endpoint ทั้งหมด (รายละเอียดเต็มอยู่ใน docs/API_CONTRACT.md):
-    GET  /api/health      เช็คว่า backend ยังมีชีวิตอยู่ไหม
-    GET  /api/operations  รายชื่อ operation + พารามิเตอร์ (frontend เอาไปสร้าง dropdown)
-    POST /api/process     รับไฟล์ภาพ -> ประมวลผล -> ส่งภาพผลลัพธ์กลับ
 """
 
 import base64
@@ -36,6 +42,10 @@ CORS(app)
 app.config["MAX_CONTENT_LENGTH"] = 15 * 1024 * 1024
 
 
+# parse_params() : แปลงค่าที่กรอกในหน้าเว็บให้เป็นตัวเลขที่ฟังก์ชันประมวลผลใช้ได้
+#   รับ  -> รายการพารามิเตอร์ที่ operation นั้นต้องการ + ค่าที่ส่งมาจากหน้าเว็บ
+#   คืน  -> dict ของตัวเลขพร้อมใช้ เช่น {"low": 60, "high": 180}
+#   ***  ถ้าค่าไม่ใช่ตัวเลข หรือเกินช่วง min/max จะโยน ValueError ออกมา  ***
 def parse_params(spec, form):
     """
     แปลงค่าที่ส่งมาใน form (เป็น string เสมอ) ให้เป็น int/float ตามที่ operation ประกาศไว้
@@ -61,6 +71,9 @@ def parse_params(spec, form):
     return params
 
 
+# health_check() : ตอบกลับว่า backend ยังทำงานอยู่
+#   รับ  -> ไม่รับอะไร (แค่เปิด URL /api/health)
+#   คืน  -> JSON {"status": "ok", "service": "Image Processing Backend"}
 @app.route("/api/health", methods=["GET"])
 def health_check():
     """ให้ frontend กดเช็คได้ว่ากรอก backend URL ถูกไหม ก่อนจะอัปโหลดภาพจริง"""
@@ -70,6 +83,9 @@ def health_check():
     })
 
 
+# list_operations() : ส่งรายชื่อวิธีประมวลผลทั้งหมดให้หน้าเว็บ
+#   รับ  -> ไม่รับอะไร
+#   คืน  -> JSON รายชื่อ operation พร้อมพารามิเตอร์ของแต่ละตัว
 @app.route("/api/operations", methods=["GET"])
 def list_operations():
     """
@@ -90,6 +106,10 @@ def list_operations():
     return jsonify({"success": True, "operations": items})
 
 
+# process() : ฟังก์ชันหลักของทั้งโปรเจกต์ — รับภาพจาก client แล้วส่งภาพที่ประมวลผลแล้วกลับไป
+#   รับ  -> ไฟล์ภาพ + ชื่อ operation + ค่าพารามิเตอร์ (ส่งมาแบบ multipart/form-data)
+#   คืน  -> JSON ที่มีภาพผลลัพธ์ฝังอยู่เป็นข้อความ base64 + ขนาดภาพ + ค่าที่ใช้จริง
+#   ***  ถ้ามีอะไรผิด จะคืน JSON {"success": false, "error": "..."} พร้อมรหัส 400/413/501/500  ***
 @app.route("/api/process", methods=["POST"])
 def process():
     # ใช้ POST เพราะ client ส่งไฟล์ + พารามิเตอร์มาใน request body ซึ่งเป็นรูปแบบมาตรฐานของการอัปโหลด
@@ -147,6 +167,9 @@ def process():
     })
 
 
+# too_large() : ดักกรณีผู้ใช้อัปโหลดไฟล์ใหญ่เกิน 15 MB
+#   รับ  -> Flask เรียกให้เองอัตโนมัติ ไม่ต้องเรียกเอง
+#   คืน  -> JSON {"success": false, "error": "ไฟล์ใหญ่เกิน 15 MB"} พร้อมรหัส 413
 @app.errorhandler(413)
 def too_large(_error):
     """Flask โยน 413 เองเมื่อไฟล์เกิน MAX_CONTENT_LENGTH — ดักไว้เพื่อตอบเป็น JSON ให้เหมือน error อื่น"""

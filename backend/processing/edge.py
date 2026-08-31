@@ -2,6 +2,11 @@
 Edge Detection — เจ้าของไฟล์: Tshering Dorji
 อ้างอิง: Lecture 9 - Edge and Corner Detection หน้า 6-22
 
+ไฟล์นี้มี 3 ฟังก์ชัน:
+    _to_odd()  ตัวช่วยเล็กๆ ทำเลขให้เป็นเลขคี่
+    canny()    หาเส้นขอบ  <- ใช้งานได้แล้ว
+    sobel()    หาความแรงของ gradient  <- ใช้งานได้แล้ว
+
 กติกาของไฟล์นี้ (ตกลงกันไว้ใน docs/API_CONTRACT.md):
     ทุกฟังก์ชันต้องมีหน้าตา  def ชื่อ(img_bgr, **params) -> numpy.ndarray
     - img_bgr : ภาพต้นฉบับ 3 channel เรียงแบบ BGR (แบบที่ OpenCV อ่านมาให้)
@@ -15,12 +20,18 @@ import cv2
 import numpy as np
 
 
+# _to_odd() : ทำให้ตัวเลขเป็นเลขคี่
+#   รับ  -> ตัวเลข 1 ตัว (เช่น 4)
+#   คืน  -> ตัวเลขเลขคี่ (เช่น 5)
 def _to_odd(n):
     """ทำให้เป็นเลขคี่เสมอ เพราะ GaussianBlur / Sobel บังคับ ksize เป็นเลขคี่"""
     n = int(n)
     return n if n % 2 == 1 else n + 1
 
 
+# canny() : หาเส้นขอบของวัตถุในภาพ
+#   รับ  -> ภาพสี + ขนาดเบลอ + threshold ต่ำ/สูง
+#   คืน  -> ภาพขาวดำ เส้นขอบเป็นสีขาว พื้นหลังสีดำ
 def canny(img_bgr, blur_ksize=5, low=50, high=150):
     """
     Canny Edge Detector — 5 ขั้นตอนตามสไลด์หน้า 9
@@ -45,6 +56,9 @@ def canny(img_bgr, blur_ksize=5, low=50, high=150):
     return cv2.Canny(blurred, int(low), int(high))
 
 
+# sobel() : หาว่าแต่ละจุดในภาพ ความสว่างเปลี่ยนแรงแค่ไหน
+#   รับ  -> ภาพสี + ขนาดเบลอ + ขนาด Sobel kernel
+#   คืน  -> ภาพเทา จุดที่ขอบชัดจะสว่าง จุดที่พื้นเรียบจะมืด
 def sobel(img_bgr, blur_ksize=5, ksize=3):
     """
     Sobel Gradient Magnitude — ขั้นตอนที่ 2 ของ Canny ที่ดึงออกมาดูเดี่ยวๆ (สไลด์หน้า 11-12)

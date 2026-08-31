@@ -76,6 +76,12 @@ code { background: #12141a; padding: 1px 5px; border-radius: 4px; }
 .results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 @media (max-width: 700px) { .results { grid-template-columns: 1fr; } }
 
+select option {
+  background: #1d2026;
+  color: var(--text);
+  padding: 8px;
+}
+
 figure {
   margin: 0;
   background: var(--card);
@@ -85,10 +91,29 @@ figure {
   text-align: center;
 }
 figcaption { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+
+.image-box {
+  min-height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d1117;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px dashed var(--line);
+}
+
+.placeholder {
+  color: var(--muted);
+  font-size: 0.9rem;
+  padding: 40px 20px;
+  user-select: none;
+}
+
 figure img {
   max-width: 100%;
+  max-height: 450px;
   border-radius: 6px;
-  background: #0d1117;
-  min-height: 60px;
+  object-fit: contain;
 }
 .download { display: inline-block; margin-top: 10px; text-decoration: none; }

@@ -11,8 +11,6 @@
  * ตามโจทย์ workshop ข้อ 2
  */
 
-const backendUrlInput = document.getElementById("backend-url");
-const connectBtn = document.getElementById("connect-btn");
 const operationCard = document.getElementById("operation-card");
 const operationSelect = document.getElementById("operation");
 const operationOwner = document.getElementById("operation-owner");
@@ -23,6 +21,8 @@ const processBtn = document.getElementById("process-btn");
 const statusEl = document.getElementById("status");
 const sourceImage = document.getElementById("source-image");
 const resultImage = document.getElementById("result-image");
+const sourcePlaceholder = document.getElementById("source-placeholder");
+const resultPlaceholder = document.getElementById("result-placeholder");
 const downloadBtn = document.getElementById("download-btn");
 
 // เก็บ operation ที่ดึงมาจาก server ไว้ เพื่อไม่ต้องยิงซ้ำทุกครั้งที่เปลี่ยน dropdown
@@ -33,36 +33,43 @@ function setStatus(message, kind = "") {
   statusEl.className = "status" + (kind ? " " + kind : "");
 }
 
-/** ตัด / ท้าย URL ทิ้ง กัน http://x:5000/ + /api/health กลายเป็น // */
+/** ดึง Backend URL อัตโนมัติ */
 function backendUrl() {
-  return backendUrlInput.value.trim().replace(/\/+$/, "");
+  const host = window.location.hostname;
+  if (!host || host === "localhost") {
+    return "http://127.0.0.1:5000";
+  }
+  return `http://${host}:5000`;
 }
 
-/** ขั้นที่ 1 — เช็คว่า backend URL ที่กรอกใช้ได้จริง แล้วค่อยดึงรายชื่อ operation */
+/** ขั้นที่ 1 — เชื่อมต่อ Backend อัตโนมัติในเบื้องหลัง แล้วดึงรายชื่อ operation */
 async function connect() {
   const base = backendUrl();
-  if (!base) {
-    setStatus("กรุณากรอก Backend URL ก่อน", "error");
-    return;
-  }
-
-  setStatus("กำลังเชื่อมต่อ " + base + " ...");
+  setStatus("กำลังเชื่อมต่อ Backend (" + base + ") ...");
   try {
-    const health = await fetch(base + "/api/health").then((r) => r.json());
-    if (health.status !== "ok") throw new Error("backend ตอบกลับผิดรูปแบบ");
+    let res = null;
+    try {
+      res = await fetch(base + "/api/health");
+    } catch (e) {
+      // Fallback ลอง 127.0.0.1 ถ้าต่อ localhost ไม่ติด
+      if (base !== "http://127.0.0.1:5000") {
+        res = await fetch("http://127.0.0.1:5000/api/health");
+      } else {
+        throw e;
+      }
+    }
+    const health = await res.json();
+    if (health.status !== "ok") throw new Error("Backend ตอบกลับผิดรูปแบบ");
 
     const data = await fetch(base + "/api/operations").then((r) => r.json());
     operations = data.operations || [];
     buildOperationSelect();
 
-    operationCard.hidden = false;
-    uploadCard.hidden = false;
-    setStatus("เชื่อมต่อสำเร็จ: " + health.service + " (" + operations.length + " operations)", "ok");
+    setStatus("เชื่อมต่อ Backend สำเร็จ: " + health.service + " (" + operations.length + " operations)", "ok");
   } catch (err) {
-    // fetch จะ throw ตอนต่อไม่ติด / โดน CORS บล็อก / URL ผิด — แยกจากกันจากใน JS ไม่ได้
     setStatus(
-      "เชื่อมต่อไม่ได้: " + err.message +
-      " — เช็คว่า backend รันอยู่จริง, URL/พอร์ตถูก, และ CORS เปิดอยู่",
+      "เชื่อมต่อ Backend ไม่สำเร็จ: " + err.message +
+      " — กรุณาตรวจสอบว่า Terminal รัน 'python app.py' อยู่",
       "error"
     );
   }
@@ -149,9 +156,11 @@ async function process() {
     }
 
     resultImage.src = data.image;
+    resultImage.style.display = "block";
+    resultPlaceholder.style.display = "none";
     downloadBtn.href = data.image;
     downloadBtn.download = data.operation + ".png";
-    downloadBtn.hidden = false;
+    downloadBtn.style.display = "inline-block";
 
     const elapsed = Math.round(performance.now() - startedAt);
     setStatus(
@@ -166,17 +175,24 @@ async function process() {
   }
 }
 
-connectBtn.addEventListener("click", connect);
 operationSelect.addEventListener("change", buildParamInputs);
 
 fileInput.addEventListener("change", () => {
   const file = fileInput.files[0];
   processBtn.disabled = !file;
-  if (!file) return;
+  if (!file) {
+    sourceImage.style.display = "none";
+    sourcePlaceholder.style.display = "block";
+    return;
+  }
   // แสดงภาพต้นฉบับจากไฟล์ในเครื่องเลย ไม่ต้องรอ server
   sourceImage.src = URL.createObjectURL(file);
+  sourceImage.style.display = "block";
+  sourcePlaceholder.style.display = "none";
   resultImage.removeAttribute("src");
-  downloadBtn.hidden = true;
+  resultImage.style.display = "none";
+  resultPlaceholder.style.display = "block";
+  downloadBtn.style.display = "none";
   setStatus("");
 });
 
