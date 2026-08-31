@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environment
+.venv/
+venv/
+env/
+
+# ผลลัพธ์ที่ดาวน์โหลดมาทดสอบ ไม่ต้องขึ้น git
+*_out.png
+output/
+results/
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+
+# สไลด์ของอาจารย์ — เก็บไว้ในเครื่องเพื่อใช้อ้างอิง แต่ยังไม่ push ขึ้น repo สาธารณะ
+# (ถ้าตกลงกันแล้วว่าให้ขึ้นได้ ให้ลบ 2 บรรทัดล่างนี้ทิ้ง)
+docs/reference/*.pdf
+docs/reference/*.png

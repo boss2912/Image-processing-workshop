@@ -1,0 +1,94 @@
+:root {
+  --bg: #14161a;
+  --card: #1d2026;
+  --line: #2c313a;
+  --text: #e6e8eb;
+  --muted: #9aa3af;
+  --accent: #4d9de0;
+  --error: #e5534b;
+  --ok: #3fb950;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", "Noto Sans Thai", system-ui, sans-serif;
+  line-height: 1.6;
+}
+
+header { max-width: 1000px; margin: 0 auto 20px; }
+h1 { margin: 0; font-size: 1.5rem; }
+.sub { margin: 4px 0 0; color: var(--muted); font-size: 0.9rem; }
+
+main { max-width: 1000px; margin: 0 auto; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+}
+.card h2 { margin: 0 0 12px; font-size: 1rem; color: var(--accent); }
+
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row label { min-width: 130px; color: var(--muted); font-size: 0.9rem; }
+
+input[type="text"], input[type="number"], select {
+  flex: 1;
+  min-width: 180px;
+  padding: 8px 10px;
+  background: #12141a;
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+button, .download {
+  padding: 8px 18px;
+  background: var(--accent);
+  color: #0d1117;
+  border: none;
+  border-radius: 6px;
+  font-weight: 600;
+  font-family: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+button:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
+
+.hint { margin: 10px 0 0; color: var(--muted); font-size: 0.82rem; }
+code { background: #12141a; padding: 1px 5px; border-radius: 4px; }
+
+#params .row { margin-top: 10px; }
+#params .param-hint { color: var(--muted); font-size: 0.8rem; width: 100%; margin: 2px 0 0 140px; }
+
+.status { min-height: 24px; margin: 4px 0 16px; font-size: 0.9rem; }
+.status.error { color: var(--error); }
+.status.ok { color: var(--ok); }
+
+.results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 700px) { .results { grid-template-columns: 1fr; } }
+
+figure {
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px;
+  text-align: center;
+}
+figcaption { color: var(--muted); font-size: 0.85rem; margin-bottom: 8px; }
+figure img {
+  max-width: 100%;
+  border-radius: 6px;
+  background: #0d1117;
+  min-height: 60px;
+}
+.download { display: inline-block; margin-top: 10px; text-decoration: none; }
