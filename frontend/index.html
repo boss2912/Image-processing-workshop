@@ -13,6 +13,22 @@
   </header>
 
   <main>
+    <!-- บอกหน้าเว็บว่า backend อยู่เครื่องไหน (สไลด์หน้า 89 ให้กรอก IP ของเครื่อง server)
+         ค่าตั้งต้นเดาให้อัตโนมัติจาก URL ของหน้าเว็บ แต่แก้เองได้เสมอ
+         จำเป็นตอนเดโม 2 เครื่อง เพราะเครื่องผู้ใช้ต้องชี้ไปที่ IP ของเครื่องเซิร์ฟเวอร์ -->
+    <section class="card" id="connect-card">
+      <h2>เชื่อมต่อ Backend</h2>
+      <div class="row">
+        <label for="backend-url">Backend URL</label>
+        <input type="text" id="backend-url" placeholder="เช่น http://192.168.1.100:5000">
+        <button id="connect-btn" type="button">เชื่อมต่อ</button>
+      </div>
+      <p class="hint">
+        รันเครื่องเดียวกับ backend ปล่อยค่าเดิมไว้ได้เลย<br>
+        ถ้าเป็นคนละเครื่อง ให้ใส่ IP ของเครื่องเซิร์ฟเวอร์ (ดูจาก <code>ipconfig</code> บนเครื่องนั้น) ตามด้วย <code>:5000</code>
+      </p>
+    </section>
+
     <!-- เลือก operation (dropdown สร้างอัตโนมัติจาก GET /api/operations) -->
     <section class="card" id="operation-card">
       <h2>เลือก Operation</h2>
