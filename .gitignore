@@ -12,6 +12,8 @@ env/
 *_out.png
 output/
 results/
+backend/uploaded.png
+backend/result.png
 
 # Editor / OS
 .vscode/

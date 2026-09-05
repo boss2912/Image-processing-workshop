@@ -18,7 +18,7 @@ backend/                 รันบนเครื่องเซิร์ฟ�
 
 frontend/                รันบนเครื่องผู้ใช้
 ├── index.html
-├── app.js               แก้ BACKEND_URL บรรทัดที่ 15
+├── app.js
 └── style.css
 ```
 
@@ -72,15 +72,7 @@ cd backend
 
 ## เครื่องผู้ใช้ (frontend)
 
-### 1. แก้ IP ของเครื่องเซิร์ฟเวอร์
-
-เปิด `frontend/app.js` แก้บรรทัดที่ 15
-
-```js
-const BACKEND_URL = "http://172.20.56.133:5000";
-```
-
-### 2. รัน
+### 1. รัน
 
 ```powershell
 cd frontend
@@ -92,9 +84,12 @@ python -m http.server 8000
 > ไม่ต้อง `pip install` อะไรเลย เพราะเครื่องนี้ไม่ได้ประมวลผลภาพ
 > และ **ห้ามดับเบิลคลิก `index.html` เปิดตรงๆ** จะได้ URL แบบ `file://` ซึ่งเบราว์เซอร์จะบล็อกการเรียก backend
 
-### 3. ใช้งาน
+### 2. ใช้งาน
 
-เลือกรูป → กดประมวลผล → ภาพซ้ายคือต้นฉบับ ภาพขวาคือผลลัพธ์ที่เครื่องเซิร์ฟเวอร์ส่งกลับมา
+พิมพ์ IP ของเครื่องเซิร์ฟเวอร์ใส่ช่อง **Backend URL** เช่น `http://172.20.56.133:5000`
+แล้วกด **เช็คการเชื่อมต่อ (GET)** ก่อน ถ้าขึ้น `ต่อได้: Image Processing Backend` แปลว่าต่อถึงแล้ว
+
+จากนั้นเลือกรูป → กด **ประมวลผล (POST)** → ภาพซ้ายคือต้นฉบับ ภาพขวาคือผลลัพธ์ที่เครื่องเซิร์ฟเวอร์ส่งกลับมา
 
 ---
 
@@ -102,9 +97,20 @@ python -m http.server 8000
 
 | Method | Endpoint | รับ | คืน |
 |---|---|---|---|
+| GET | `/api/health` | — | JSON `{"status": "ok", "service": "Image Processing Backend"}` |
 | POST | `/api/process` | `multipart/form-data` field ชื่อ `image` | JSON `{"success": true, "image": "data:image/png;base64,..."}` |
 
-กรณีผิดพลาดคืน `{"success": false, "error": "..."}` พร้อม HTTP 400 หรือ 500
+กรณีผิดพลาดคืน `{"success": false, "error": "..."}` พร้อม HTTP 400
+
+## ปุ่มไหน เรียกโค้ดตัวไหน
+
+| ปุ่มในหน้าเว็บ | ไฟล์ frontend | HTTP | `def` ใน `backend/app.py` |
+|---|---|---|---|
+| เช็คการเชื่อมต่อ (GET) | `app.js` ส่วนที่ 2 | GET `/api/health` | `health_check()` |
+| ประมวลผล (POST) | `app.js` ส่วนที่ 4 | POST `/api/process` | `process()` |
+| — (`process()` เรียกต่อเอง) | — | — | `find_edges_with_canny()` |
+
+`backend/app.py` มี 3 `def` เท่านี้ ไม่มีตัวไหนที่เขียนทิ้งไว้เฉยๆ
 
 ---
 

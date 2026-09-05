@@ -24,7 +24,7 @@ button {
   cursor: pointer;
 }
 
-#status { min-height: 24px; font-size: 0.9rem; color: #9aa3af; }
+#status-text { min-height: 24px; font-size: 0.9rem; color: #9aa3af; }
 
 .results { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; max-width: 1000px; }
 @media (max-width: 700px) { .results { grid-template-columns: 1fr; } }
@@ -46,3 +46,17 @@ figure img {
   background: #0d1117;
   border-radius: 6px;
 }
+
+label { color: #9aa3af; font-size: 0.9rem; }
+
+input[type="text"] {
+  padding: 7px 10px;
+  background: #1d2026;
+  color: #e6e8eb;
+  border: 1px solid #2c313a;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+input[type="text"] { min-width: 240px; }

@@ -1,64 +1,124 @@
 /*
  * Image Processing Client — เครื่องผู้ใช้
+ * วิชา 310-3311 Image Processing / Workshop ท้าย Lecture 9
  *
- * ไฟล์นี้ไม่ประมวลผลภาพเองเลย มีหน้าที่แค่
- *   1. ให้ผู้ใช้เลือกรูป
- *   2. ส่งรูปไปที่เครื่องเซิร์ฟเวอร์
- *   3. เอาภาพผลลัพธ์ที่ส่งกลับมาแสดง
+ * ไฟล์นี้ไม่ประมวลผลภาพเองแม้แต่บรรทัดเดียว การประมวลผลเกิดที่เครื่องเซิร์ฟเวอร์ทั้งหมด
+ *
+ * เรียงตามลำดับที่ใช้งานจริง
+ *   1. ดึงของในหน้าเว็บมาเก็บไว้ในตัวแปร
+ *   2. ปุ่ม "เช็คการเชื่อมต่อ"  ยิง GET  /api/health
+ *   3. เลือกไฟล์             แสดงภาพต้นฉบับ ยังไม่ส่งไปไหน
+ *   4. ปุ่ม "ประมวลผล"       ยิง POST /api/process
  */
 
-// ===================================================================
-//  แก้บรรทัดนี้บรรทัดเดียว ให้เป็น IP ของเครื่องเซิร์ฟเวอร์
-//  หา IP ด้วยการรัน  ipconfig  บนเครื่องเซิร์ฟเวอร์ แล้วดูบรรทัด IPv4 Address
-//  ถ้ารันเครื่องเดียวกับ backend ใช้ http://127.0.0.1:5000 ได้เลย
-// ===================================================================
-const BACKEND_URL = "http://172.20.56.133:5000";
 
-const fileInput = document.getElementById("file-input");
-const processBtn = document.getElementById("process-btn");
-const sourceImage = document.getElementById("source-image");
+// ====================================================================
+//  1. ดึงของในหน้าเว็บมาเก็บไว้ในตัวแปร
+// ====================================================================
+// ชื่อ id ในวงเล็บ ต้องตรงกับที่เขียนไว้ใน index.html เป๊ะๆ ถ้าพิมพ์ผิดจะได้ค่า null
+
+const backendUrlInput = document.getElementById("backend-url-input");
+const checkConnectionButton = document.getElementById("check-connection-button");
+const imageFileInput = document.getElementById("image-file-input");
+const processButton = document.getElementById("process-button");
+const originalImage = document.getElementById("original-image");
 const resultImage = document.getElementById("result-image");
-const statusEl = document.getElementById("status");
+const statusText = document.getElementById("status-text");
 
-// เลือกไฟล์แล้วแสดงภาพต้นฉบับทันที (ยังไม่ส่งไปไหน)
-fileInput.addEventListener("change", () => {
-  const file = fileInput.files[0];
-  if (!file) return;
-  sourceImage.src = URL.createObjectURL(file);
-  resultImage.removeAttribute("src");
-  statusEl.textContent = "";
+
+// ====================================================================
+//  2. ปุ่ม "เช็คการเชื่อมต่อ"  ->  GET /api/health
+// ====================================================================
+// คำว่า async หน้า function แปลว่าข้างในมีการรอ (await) ตรงนี้คือรอ server ตอบกลับ
+// ระหว่างที่รอ หน้าเว็บจะไม่ค้าง
+
+checkConnectionButton.addEventListener("click", async function () {
+  const serverUrl = backendUrlInput.value;
+
+  statusText.textContent = "กำลังเช็ค " + serverUrl + " ...";
+
+  // try / catch ดักกรณีต่อไม่ติดเลย เช่นพิมพ์ IP ผิด หรือยังไม่ได้เปิด app.py
+  // ถ้าไม่ดักไว้ หน้าเว็บจะเงียบไปเฉยๆ ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น
+  try {
+    // fetch ถ้าไม่บอกว่าใช้วิธีไหน มันจะใช้ GET ให้เอง
+    const response = await fetch(serverUrl + "/api/health");
+    const responseData = await response.json();
+
+    // status กับ service คือ 2 ค่าที่ health_check() ใน app.py ส่งมา
+    statusText.textContent = "ต่อได้: " + responseData.service + " — status " + responseData.status;
+  } catch (error) {
+    statusText.textContent =
+      "ต่อไม่ได้: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+  }
 });
 
-// กดประมวลผล = ส่งไฟล์ไปที่เครื่องเซิร์ฟเวอร์
-processBtn.addEventListener("click", async () => {
-  const file = fileInput.files[0];
-  if (!file) {
-    statusEl.textContent = "ยังไม่ได้เลือกรูป";
+
+// ====================================================================
+//  3. เลือกไฟล์  ->  แสดงภาพต้นฉบับทันที (ยังไม่ยุ่งกับ server)
+// ====================================================================
+
+imageFileInput.addEventListener("change", function () {
+  // .files คือรายการไฟล์ที่เลือก เอาตัวแรกคือ [0] เพราะให้เลือกได้ทีละไฟล์
+  const selectedFile = imageFileInput.files[0];
+
+  // เปิดหน้าต่างเลือกไฟล์แล้วกดยกเลิก จะไม่มีไฟล์ ให้จบตรงนี้
+  if (!selectedFile) {
     return;
   }
 
-  // FormData = รูปแบบ multipart/form-data ซึ่งเป็นวิธีมาตรฐานของการอัปโหลดไฟล์
-  // ชื่อ "image" ต้องตรงกับที่ backend อ่าน (request.files["image"])
-  const form = new FormData();
-  form.append("image", file);
+  // createObjectURL สร้างที่อยู่ชั่วคราวของไฟล์ในเครื่อง ให้ <img> เอาไปแสดงได้
+  originalImage.src = URL.createObjectURL(selectedFile);
 
-  statusEl.textContent = "กำลังส่งไปประมวลผลที่ server ...";
+  // ล้างผลลัพธ์เก่าทิ้ง จะได้ไม่สับสนว่าเป็นผลของรูปเก่าหรือรูปใหม่
+  resultImage.removeAttribute("src");
+  statusText.textContent = "";
+});
+
+
+// ====================================================================
+//  4. ปุ่ม "ประมวลผล"  ->  POST /api/process พร้อมไฟล์ภาพ
+// ====================================================================
+
+processButton.addEventListener("click", async function () {
+  const selectedFile = imageFileInput.files[0];
+
+  if (!selectedFile) {
+    statusText.textContent = "ยังไม่ได้เลือกรูป";
+    return;
+  }
+
+  // FormData คือรูปแบบมาตรฐานของการแนบไฟล์ไปกับ request
+  // ชื่อ "image" ต้องตรงกับฝั่ง server ที่เขียนว่า request.files["image"]
+  // ถ้าตั้งชื่อไม่ตรงกัน server จะตอบว่า No image uploaded
+  const formData = new FormData();
+  formData.append("image", selectedFile);
+
+  const serverUrl = backendUrlInput.value;
+
+  statusText.textContent = "กำลังส่งไปประมวลผลที่ server ...";
+
   try {
-    const response = await fetch(BACKEND_URL + "/api/process", {
+    // รอบนี้ต้องบอกว่าใช้ POST เพราะค่าเริ่มต้นของ fetch คือ GET
+    // body คือของที่แนบไปด้วย ในที่นี้คือไฟล์ภาพที่อยู่ใน formData
+    const response = await fetch(serverUrl + "/api/process", {
       method: "POST",
-      body: form,
+      body: formData,
     });
-    const data = await response.json();
 
-    if (!data.success) {
-      statusEl.textContent = "Server ตอบกลับว่า: " + data.error;
+    const responseData = await response.json();
+
+    // server ตอบ success เป็น false แปลว่ามีอะไรผิด เช่นส่งไฟล์ที่ไม่ใช่รูปไป
+    if (responseData.success === false) {
+      statusText.textContent = "Server ตอบกลับว่า: " + responseData.error;
       return;
     }
 
-    resultImage.src = data.image;
-    statusEl.textContent = "สำเร็จ";
-  } catch (err) {
-    statusEl.textContent =
-      "ส่งไม่สำเร็จ: " + err.message + " — เช็คว่า BACKEND_URL ถูกต้องและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+    // responseData.image คือข้อความ base64 ที่ app.py ส่งมา
+    // เอาไปใส่ src ของ <img> ได้ตรงๆ เบราว์เซอร์แปลงกลับเป็นรูปให้เอง
+    resultImage.src = responseData.image;
+    statusText.textContent = "สำเร็จ";
+  } catch (error) {
+    statusText.textContent =
+      "ส่งไม่สำเร็จ: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
   }
 });

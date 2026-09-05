@@ -7,20 +7,32 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <h1>Image Processing Client</h1>
   <p class="sub">310-3311 Image Processing &middot; Workshop Lecture 9</p>
 
+  <!-- แถวที่ 1 : บอกว่าเครื่องเซิร์ฟเวอร์อยู่ที่ไหน (สไลด์หน้า 89) -->
+  <!-- มีช่องกรอกเพื่อไม่ต้องกลับไปแก้ไฟล์ app.js ทุกครั้งที่ IP เปลี่ยน -->
   <div class="row">
-    <input type="file" id="file-input" accept="image/*">
-    <button id="process-btn" type="button">ประมวลผล</button>
+    <label for="backend-url-input">Backend URL</label>
+    <input type="text" id="backend-url-input" value="http://127.0.0.1:5000">
+    <button id="check-connection-button" type="button">เช็คการเชื่อมต่อ (GET)</button>
   </div>
 
-  <p id="status"></p>
+  <!-- แถวที่ 2 : เลือกรูปจากเครื่องตัวเอง แล้วส่งไปประมวลผลที่เครื่องเซิร์ฟเวอร์ -->
+  <div class="row">
+    <input type="file" id="image-file-input" accept="image/*">
+    <button id="process-button" type="button">ประมวลผล (POST)</button>
+  </div>
 
+  <!-- บรรทัดบอกสถานะ ข้อความข้างในถูกเปลี่ยนจากไฟล์ app.js -->
+  <p id="status-text"></p>
+
+  <!-- ซ้าย = ภาพจากเครื่องตัวเอง / ขวา = ภาพที่ server ประมวลผลแล้วส่งกลับมา -->
   <div class="results">
     <figure>
       <figcaption>ภาพต้นฉบับ (เครื่องผู้ใช้)</figcaption>
-      <img id="source-image" alt="ภาพต้นฉบับ">
+      <img id="original-image" alt="ภาพต้นฉบับ">
     </figure>
     <figure>
       <figcaption>ผลลัพธ์ (ประมวลผลที่เครื่องเซิร์ฟเวอร์)</figcaption>
@@ -28,6 +40,8 @@
     </figure>
   </div>
 
+  <!-- โหลด app.js ไว้ล่างสุด เพื่อให้ของทุกชิ้นข้างบนถูกสร้างเสร็จก่อน -->
   <script src="app.js"></script>
+
 </body>
 </html>
