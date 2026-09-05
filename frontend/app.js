@@ -41,14 +41,27 @@ checkConnectionButton.addEventListener("click", async function () {
   // ถ้าไม่ดักไว้ หน้าเว็บจะเงียบไปเฉยๆ ผู้ใช้ไม่รู้ว่าเกิดอะไรขึ้น
   try {
     // fetch ถ้าไม่บอกว่าใช้วิธีไหน มันจะใช้ GET ให้เอง
-    const response = await fetch(serverUrl + "/api/health");
+    //
+    // signal: AbortSignal.timeout(5000) แปลว่า "ถ้าเกิน 5000 มิลลิวินาที (5 วินาที) ให้เลิกรอ"
+    // ถ้าไม่ใส่ไว้ แล้วพิมพ์ IP ที่ไม่มีอยู่จริงในวง หน้าเว็บจะค้างที่ "กำลังเช็ค ..." เป็นนาที
+    // ตั้งไว้ 5 วินาทีเพราะ /api/health ตอบแค่ JSON 2 บรรทัด ปกติเสร็จใน 0.01 วินาที
+    const response = await fetch(serverUrl + "/api/health", {
+      signal: AbortSignal.timeout(5000),
+    });
+
     const responseData = await response.json();
 
     // status กับ service คือ 2 ค่าที่ health_check() ใน app.py ส่งมา
     statusText.textContent = "ต่อได้: " + responseData.service + " — status " + responseData.status;
   } catch (error) {
-    statusText.textContent =
-      "ต่อไม่ได้: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+    // ถ้าหมดเวลา error.name จะเป็น "TimeoutError" แยกออกมาบอกให้ชัด
+    // ไม่งั้นผู้ใช้จะเห็นแค่ข้อความอังกฤษว่า signal timed out ซึ่งอ่านไม่รู้เรื่อง
+    if (error.name === "TimeoutError") {
+      statusText.textContent = "ต่อไม่ได้: รอเกิน 5 วินาทีแล้ว server ไม่ตอบ — เช็คว่า IP ถูกและเปิด app.py อยู่";
+    } else {
+      statusText.textContent =
+        "ต่อไม่ได้: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+    }
   }
 });
 
@@ -100,9 +113,14 @@ processButton.addEventListener("click", async function () {
   try {
     // รอบนี้ต้องบอกว่าใช้ POST เพราะค่าเริ่มต้นของ fetch คือ GET
     // body คือของที่แนบไปด้วย ในที่นี้คือไฟล์ภาพที่อยู่ใน formData
+    //
+    // timeout ตรงนี้ตั้งไว้ 60 วินาที ยาวกว่าปุ่มเช็คการเชื่อมต่อ 12 เท่า
+    // เพราะรูปจากมือถือไฟล์ใหญ่ 20 MB ขึ้นไป ส่งข้าม Wi-Fi กินเวลาหลายสิบวินาทีได้
+    // ถ้าตั้ง 5 วินาทีเท่ากัน รูปใหญ่จะถูกตัดทิ้งกลางทางทั้งที่ server ทำงานปกติ
     const response = await fetch(serverUrl + "/api/process", {
       method: "POST",
       body: formData,
+      signal: AbortSignal.timeout(60000),
     });
 
     const responseData = await response.json();
@@ -118,7 +136,11 @@ processButton.addEventListener("click", async function () {
     resultImage.src = responseData.image;
     statusText.textContent = "สำเร็จ";
   } catch (error) {
-    statusText.textContent =
-      "ส่งไม่สำเร็จ: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+    if (error.name === "TimeoutError") {
+      statusText.textContent = "ส่งไม่สำเร็จ: รอเกิน 60 วินาทีแล้ว server ไม่ตอบ — ลองรูปที่เล็กลง หรือเช็คสัญญาณ Wi-Fi";
+    } else {
+      statusText.textContent =
+        "ส่งไม่สำเร็จ: " + error.message + " — เช็คว่า Backend URL ถูกและเครื่องเซิร์ฟเวอร์รัน app.py อยู่";
+    }
   }
 });
